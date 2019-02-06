@@ -3,6 +3,7 @@ using System.IO;
 using WindowsSearch;
 using Microsoft.Search.Interop;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 using WinShell;
 using System.Collections.Generic;
 using System.Text;
@@ -164,9 +165,12 @@ Options:
             using (WindowsSearchSession session = new WindowsSearchSession(libPath))
             {
                 var startTicks = Environment.TickCount;
+                int ticksToFirstRead = 0;
                 using (var reader = session.Query(sqlQuery))
                 {
                     reader.WriteColumnNamesToCsv(Console.Out);
+                    // Need unchecked because tickcount can wrap around - nevertheless it still generates a valid result
+                    unchecked { ticksToFirstRead = Environment.TickCount - startTicks; }
                     int rowCount;
                     if (!s_silent)
                     {
@@ -179,10 +183,17 @@ Options:
 
                     Console.Error.WriteLine();
                     Console.Error.WriteLine("{0} rows.", rowCount);
+                    Debug.WriteLine("{0} rows.", rowCount);
                 }
+
                 int elapsedTicks;
                 unchecked { elapsedTicks = Environment.TickCount - startTicks; }
+
+                Console.Error.WriteLine($"{ticksToFirstRead / 1000:d}.{ticksToFirstRead % 1000:d3} until first read.");
+                Debug.WriteLine($"{ticksToFirstRead / 1000:d}.{ticksToFirstRead % 1000:d3} until first read.");
+
                 Console.Error.WriteLine($"{elapsedTicks / 1000:d}.{elapsedTicks % 1000:d3} seconds elapsed.");
+                Debug.WriteLine($"{elapsedTicks / 1000:d}.{elapsedTicks % 1000:d3} seconds elapsed.");
             }
 
         }
