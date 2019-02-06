@@ -97,7 +97,7 @@ namespace WindowsSearch
             }
             else if (sRxSystemIndex2.Match(sql).Success)
             {
-                sql = sRxSystemIndex.Replace(sql, string.Format(@" FROM {0}SystemIndex WHERE SCOPE='file:{1}'", m_hostPrefix, m_pathInUrlForm));
+                sql = sRxSystemIndex2.Replace(sql, string.Format(@" FROM {0}SystemIndex WHERE SCOPE='file:{1}'", m_hostPrefix, m_pathInUrlForm));
             }
             else
             {
@@ -106,6 +106,7 @@ namespace WindowsSearch
             Debug.WriteLine(sql);
             using (OleDbCommand cmd = new OleDbCommand(sql, m_dbConnection))
             {
+                cmd.CommandTimeout = 600; // Seconds
                 return cmd.ExecuteReader();
             }
         }
