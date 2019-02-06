@@ -86,11 +86,23 @@ namespace WindowsSearch
         }
 
         static readonly Regex sRxSystemIndex = new Regex(@"\sFROM\s+""?SystemIndex""?\s+WHERE\s+", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+        static readonly Regex sRxSystemIndex2 = new Regex(@"\sFROM\s+""?SystemIndex""?\s*$", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
         public OleDbDataReader Query(string sql)
         {
             // Update the scope in the SQL statement
-            sql = sRxSystemIndex.Replace(sql, string.Format(@" FROM {0}SystemIndex WHERE SCOPE='file:{1}' AND ", m_hostPrefix, m_pathInUrlForm));
+            if (sRxSystemIndex.Match(sql).Success)
+            {
+                sql = sRxSystemIndex.Replace(sql, string.Format(@" FROM {0}SystemIndex WHERE SCOPE='file:{1}' AND ", m_hostPrefix, m_pathInUrlForm));
+            }
+            else if (sRxSystemIndex2.Match(sql).Success)
+            {
+                sql = sRxSystemIndex.Replace(sql, string.Format(@" FROM {0}SystemIndex WHERE SCOPE='file:{1}'", m_hostPrefix, m_pathInUrlForm));
+            }
+            else
+            {
+                 throw new ApplicationException("SQL Statement didn't match expected syntax.");
+            }
             Debug.WriteLine(sql);
             using (OleDbCommand cmd = new OleDbCommand(sql, m_dbConnection))
             {
