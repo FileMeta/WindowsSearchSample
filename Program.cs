@@ -19,6 +19,7 @@ Options:
     -lib <LibraryRoot>  Path to the root of the folder tree to be searched
     -s <windows search> Perform a search using Windows Search syntax
     -q <SQL Query>      Perform a search using SQL syntax
+    -x                  Silent output - just reads all rows to time how long the query takes.
 ";
         // 78 Columns                                                                |
 
@@ -27,6 +28,7 @@ Options:
         -lib \\Ganymede\Archive\Photos -s "cameramodel:\"EZ Controller\" cameramaker:\"NORITSU KOKI\" datetaken:11/20/2013 11:15 AM"
         */
 
+        static bool s_silent = false;
 
         static void Main(string[] args)
         {
@@ -66,6 +68,11 @@ Options:
                             if (nArg >= args.Length) throw new ArgumentException("Command-Line Syntax Error: No value specified for '-q'");
                             sqlQuery = args[nArg];
                             break;
+
+                        case "-x":
+                            s_silent = true;
+                            break;
+
 
                         default:
                             throw new ArgumentException(string.Format("Unexpected command-line parameter '{0}'", args[nArg]));
@@ -156,17 +163,42 @@ Options:
         {
             using (WindowsSearchSession session = new WindowsSearchSession(libPath))
             {
+                var startTicks = Environment.TickCount;
                 using (var reader = session.Query(sqlQuery))
                 {
                     reader.WriteColumnNamesToCsv(Console.Out);
-                    int rowCount = reader.WriteRowsToCsv(Console.Out);
+                    int rowCount;
+                    if (!s_silent)
+                    {
+                        rowCount = reader.WriteRowsToCsv(Console.Out);
+                    }
+                    else
+                    {
+                        rowCount = SilentlyReadAllRows(reader);
+                    }
+
                     Console.Error.WriteLine();
-                    Console.Error.WriteLine("{0} rows written.", rowCount);
+                    Console.Error.WriteLine("{0} rows.", rowCount);
                 }
+                int elapsedTicks;
+                unchecked { elapsedTicks = Environment.TickCount - startTicks; }
+                Console.Error.WriteLine($"{elapsedTicks / 1000:d}.{elapsedTicks % 1000:d3} seconds elapsed.");
             }
 
         }
 
+        static int SilentlyReadAllRows(System.Data.OleDb.OleDbDataReader reader)
+        {
+            int rowCount = 0;
+            while (reader.Read())
+            {
+                ++rowCount;
+                object[] values = new object[reader.FieldCount];
+                reader.GetValues(values);
+            }
+
+            return rowCount;
+        }
     }
 }
 
